@@ -1,0 +1,10 @@
+{
+  "name": "stemrobo-ai-assistant",
+  "version": "1.0.0",
+  "description": "An intelligent AI Chat Assistant for STEMROBO Technologies",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "@google/genai": "^1.28.0"
+  }
+}
