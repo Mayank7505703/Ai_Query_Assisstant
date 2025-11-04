@@ -149,7 +149,7 @@ if (!process.env.GEMINI_API_KEY) {
 
 // ✅ Fix: Correct Gemini API initialization
 const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // ✅ Store chat sessions in memory
 const chatSessions = new Map();
