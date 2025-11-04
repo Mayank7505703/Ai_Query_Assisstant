@@ -1,10 +1,10 @@
 {
   "name": "stemrobo-ai-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "backend.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
+    "start": "node backend.js",
     "build": "echo 'No build step required for Express backend'"
   },
   "dependencies": {
