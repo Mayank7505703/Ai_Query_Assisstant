@@ -130,13 +130,17 @@ Final Instruction
 
 Always respond as the official AI representative of STEMROBO Technologies Pvt. Ltd., never as a generic chatbot.`;
 
+
 // ✅ Express App Setup
 const app = express();
 const port = process.env.PORT || 3001;
 
 // ✅ CORS for Render + Vercel
 app.use(cors({
-  origin: ["https://ai-assistant-ed5op1k7m-idris-projects-711eb9ab.vercel.app", "http://localhost:5173"],
+  origin: [
+    "https://ai-assistant-ed5op1k7m-idris-projects-711eb9ab.vercel.app",
+    "http://localhost:5173"
+  ],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"]
 }));
@@ -187,6 +191,7 @@ app.post('/api/chat', async (req, res) => {
       ...previousMessages
     ];
 
+    // ✅ FIXED LINE (use model directly instead of ai)
     const result = await model.generateContent({ contents: chatInput });
     const reply = result.response.text();
 
@@ -202,6 +207,7 @@ app.post('/api/chat', async (req, res) => {
 
 // ✅ Root route
 app.get('/', (req, res) => {
+  console.log("🛰️ Frontend connected to backend successfully!");
   res.send('✅ STEMROBO AI backend is running successfully!');
 });
 

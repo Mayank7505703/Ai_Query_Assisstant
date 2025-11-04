@@ -18,30 +18,24 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeChat = async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/start`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-        
-        
-
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+  
+        if (!res.ok) throw new Error(`Failed to connect: ${res.status}`);
         const data = await res.json();
-
-        if (!data.chatId) throw new Error("Failed to start chat session.");
-
+  
+        if (!data.chatId) throw new Error("No chatId returned from backend");
+  
         setChatId(data.chatId);
         setMessages([
           {
             id: "initial-message",
             role: "model",
-            text:
-              "👋 Hello! I am the STEMROBO Assistant. How can I help you today?",
+            text: "👋 Hello! I am the STEMROBO Assistant. How can I help you today?",
           },
         ]);
-
         setInitializationStatus("success");
         console.log("✅ STEMROBO Assistant initialized successfully");
       } catch (error) {
@@ -57,9 +51,10 @@ const App: React.FC = () => {
         setInitializationStatus("error");
       }
     };
-
+  
     initializeChat();
   }, []);
+  
 
   // ✅ Handle message send
   const handleSendMessage = useCallback(
