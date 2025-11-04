@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { v4 as uuidv4 } from 'uuid';
 import 'dotenv/config';
 
@@ -141,7 +141,7 @@ if (!process.env.API_KEY) {
   throw new Error("API_KEY environment variable not set. Please create a .env file.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenerativeAI({ apiKey: process.env.API_KEY });
 const model = 'gemini-2.5-flash';
 
 // In-memory store for chat sessions. A database would be used for production persistence.

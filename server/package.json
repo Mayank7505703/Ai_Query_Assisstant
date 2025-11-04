@@ -8,10 +8,10 @@
     "build": "echo 'No build step required for Express backend'"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@google/generative-ai": "^0.8.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "@google/generative-ai": "^0.8.0",
+    "express": "^4.18.2",
     "uuid": "^9.0.1"
   }
 }
