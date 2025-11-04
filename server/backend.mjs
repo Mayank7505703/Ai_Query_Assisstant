@@ -137,13 +137,21 @@ const port = process.env.PORT || 3001;
 
 // ✅ CORS for Render + Vercel
 app.use(cors({
-  origin: [
-    "https://ai-assistant-by2ecicz0-idris-projects-711eb9ab.vercel.app",
-    "http://localhost:5173"
-  ],
+  origin: (origin, callback) => {
+    // Allow all in dev, restrict in prod
+    const allowed = [
+      "https://ai-assistant-nine-theta.vercel.app",
+      "https://ai-assistant-git-main-idris-projects-711eb9ab.vercel.app",
+      "http://localhost:5173"
+    ];
+    if (!origin || allowed.includes(origin)) return callback(null, true);
+    console.warn(`❌ CORS blocked request from: ${origin}`);
+    return callback(new Error("Not allowed by CORS"));
+  },
   methods: ["GET", "POST"],
-  allowedHeaders: ["Content-Type"]
+  allowedHeaders: ["Content-Type"],
 }));
+
 app.use(bodyParser.json());
 
 // ✅ Fix: Correct environment variable name
