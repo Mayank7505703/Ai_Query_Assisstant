@@ -139,11 +139,8 @@ const port = process.env.PORT || 3001;
 // ✅ CORS for Render + Vercel
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow all in dev, restrict in prod
     const allowed = [
-      "https://ai-assistant-nine-theta.vercel.app",
-      "https://ai-assistant-4n9si99ow-idris-projects-711eb9ab.vercel.app",
-      "https://ai-assistant-idris-projects-711eb9ab.vercel.app",
+      "https://ai-assistant-56fiue5fg-idris-projects-711eb9ab.vercel.app",
       "http://localhost:5173"
     ];
     if (!origin || allowed.includes(origin)) return callback(null, true);
@@ -153,6 +150,7 @@ app.use(cors({
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type"],
 }));
+
 
 app.use(bodyParser.json());
 
