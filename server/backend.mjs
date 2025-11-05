@@ -142,7 +142,7 @@ app.use(cors({
     const allowed = [
       "https://ai-assistant-nine-theta.vercel.app",
       "https://ai-assistant-git-main-idris-projects-711eb9ab.vercel.app",
-      "https://ai-assistant-er9sjj6is-idris-projects-711eb9ab.vercel.app",
+      "https://ai-assistant-idris-projects-711eb9ab.vercel.app/",
       "http://localhost:5173"
     ];
     if (!origin || allowed.includes(origin)) return callback(null, true);
