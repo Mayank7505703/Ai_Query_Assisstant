@@ -141,6 +141,7 @@ app.use(cors({
   origin: (origin, callback) => {
     const allowed = [
       "https://ai-assistant-nine-theta.vercel.app",
+      "https://ai-assistant-f555ymn9k-idris-projects-711eb9ab.vercel.app",
       "https://ai-assistant-56fiue5fg-idris-projects-711eb9ab.vercel.app",
       "http://localhost:5173"
     ];
