@@ -166,7 +166,7 @@ console.log("Gemini key loaded:", process.env.GEMINI_API_KEY?.slice(0, 10));
 const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // ✅ ✅ Correct model here
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 
 // ✅ Store chat sessions in memory
