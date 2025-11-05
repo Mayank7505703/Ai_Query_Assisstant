@@ -1,13 +1,30 @@
+/************************************************************
+✅ Load .env FIRST + absolute path
+*************************************************************/
+import path from "path";
+import { fileURLToPath } from "url";
 import { config } from "dotenv";
-config();     // ✅ MUST be first
 
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ✅ Load `.env` inside /server folder
+config({ path: path.join(__dirname, ".env") });
+
+console.log("✅ ENV Loaded => GEMINI_API_KEY:", process.env.GEMINI_API_KEY?.slice(0, 8));
+
+/************************************************************
+✅ Imports
+*************************************************************/
+import express from "express";
+import cors from "cors";
+import bodyParser from "body-parser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
-// ✅ FULL System prompt EXACTLY as you provided (NOT shortened)
+/************************************************************
+✅ FULL SYSTEM PROMPT — UNCHANGED
+*************************************************************/
 const SYSTEM_PROMPT = `You are an intelligent, polite, and professional AI Chat Assistant named STEMROBO Assistant, created for STEMROBO Technologies Pvt. Ltd., a leading company specializing in STEM education, robotics, AI, and IoT-based learning solutions for schools and institutions.
 
 Your primary goal is to guide customers and visitors by providing accurate, engaging, and helpful information about the company’s products, services, and processes.
@@ -132,25 +149,19 @@ Final Instruction
 
 Always respond as the official AI representative of STEMROBO Technologies Pvt. Ltd., never as a generic chatbot.`;
 
-
-// ✅ Express App Setup
+/************************************************************
+✅ Express Setup
+*************************************************************/
 const app = express();
 const port = process.env.PORT || 3001;
 
-// ✅ CORS
 app.use(
   cors({
-    origin: (origin, callback) => {
-      const allowed = [
-        "https://ai-assistant-nine-theta.vercel.app",
-        "https://ai-assistant-f555ymn9k-idris-projects-711eb9ab.vercel.app",
-        "http://localhost:5173"
-      ];
-
-      if (!origin || allowed.includes(origin)) return callback(null, true);
-      console.warn(`❌ CORS blocked request from: ${origin}`);
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: [
+      "http://localhost:5173",
+      "https://ai-assistant-nine-theta.vercel.app",
+      "https://ai-assistant-f555ymn9k-idris-projects-711eb9ab.vercel.app",
+    ],
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
@@ -158,92 +169,92 @@ app.use(
 
 app.use(bodyParser.json());
 
-
-// ✅ ENV CHECK
+/************************************************************
+✅ Validate ENV
+*************************************************************/
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY not set. Add it in Render env.");
+  throw new Error("❌ GEMINI_API_KEY NOT FOUND — Add to .env");
 }
 
-console.log("Gemini key loaded:", process.env.GEMINI_API_KEY?.slice(0, 10));
+/************************************************************
+✅ Gemini Init
+*************************************************************/
+const genAI = new GoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
-const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+// ✅ Recommended Model
+const model = genAI.getGenerativeModel({
+  model: "models/gemini-2.5-flash",
+});
 
-// ✅ Correct model
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
-
-
-// ✅ Store chat sessions
+/************************************************************
+✅ Chat Session Memory
+*************************************************************/
 const chatSessions = new Map();
 
-
-// ✅ Start new chat session
+/************************************************************
+✅ POST /api/start
+*************************************************************/
 app.post("/api/start", (req, res) => {
   try {
     const chatId = uuidv4();
     chatSessions.set(chatId, []);
-    console.log(`🆕 New chat session started: ${chatId}`);
+    console.log("🆕 New Session:", chatId);
     res.json({ chatId });
-  } catch (error) {
-    console.error("❌ Failed to start chat session:", error);
-    res.status(500).json({ error: "Could not initialize chat session." });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to initialize chat" });
   }
 });
 
-
-// ✅ Handle chat messages
+/************************************************************
+✅ POST /api/chat
+*************************************************************/
 app.post("/api/chat", async (req, res) => {
   const { chatId, message } = req.body;
 
   if (!chatId || !chatSessions.has(chatId)) {
-    return res.status(400).json({ error: "Invalid or missing chatId" });
+    return res.status(400).json({ error: "Invalid chatId" });
   }
   if (!message) {
-    return res.status(400).json({ error: "Missing message" });
+    return res.status(400).json({ error: "No user message" });
   }
 
   try {
-    const previousMessages = chatSessions.get(chatId);
+    const history = chatSessions.get(chatId);
 
-    // ✅ Store user’s message
-    previousMessages.push({ role: "user", text: message });
+    history.push({ role: "user", text: message });
 
-    // ✅ Build full conversation including system
-    const fullPrompt =
+    const promptText =
       SYSTEM_PROMPT +
       "\n\n" +
-      previousMessages
-        .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
-        .join("\n") +
-      "\nAssistant:";
+      history.map((m) => `${m.role}: ${m.text}`).join("\n") +
+      "\nassistant:";
 
-    // ✅ Correct Gemini request
-    const result = await model.generateContent(fullPrompt);
+    const gemRes = await model.generateContent(promptText);
 
-    // ✅ Extract response
-    const reply = result?.response?.text() || "Sorry, I couldn't generate a response.";
+    const reply = gemRes?.response?.text() ?? "⚠️ No reply generated";
 
-    // ✅ Store assistant message
-    previousMessages.push({ role: "assistant", text: reply });
-    chatSessions.set(chatId, previousMessages);
+    history.push({ role: "assistant", text: reply });
+    chatSessions.set(chatId, history);
 
     res.json({ text: reply });
-  } catch (error) {
-    console.error("💥 Gemini error:", error);
-    res.status(500).json({ error: "Failed to process chat message" });
+  } catch (e) {
+    console.error("Gemini error:", e);
+    res.status(500).json({ error: "Failed to process message" });
   }
 });
 
-
-// ✅ Root endpoint
-app.get("/", (req, res) => {
-  console.log("🛰️ Frontend connected to backend successfully!");
-  res.send("✅ STEMROBO AI backend is running successfully!");
+/************************************************************
+✅ GET /
+*************************************************************/
+app.get("/", (_req, res) => {
+  res.send("✅ STEMROBO Backend Running");
 });
 
-
-// ✅ Start server
+/************************************************************
+✅ Start Server
+*************************************************************/
 app.listen(port, () => {
-  console.log(`🚀 STEMROBO AI backend is running on port ${port}`);
-  console.log("✅ Ensure your frontend is using this backend URL.");
+  console.log("✅ Server running on:", port);
 });
