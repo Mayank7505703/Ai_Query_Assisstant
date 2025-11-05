@@ -142,7 +142,7 @@ app.use(cors({
     const allowed = [
       "https://ai-assistant-nine-theta.vercel.app",
       "https://ai-assistant-git-main-idris-projects-711eb9ab.vercel.app",
-      "https://ai-assistant-idris-projects-711eb9ab.vercel.app/",
+      "https://ai-assistant-idris-projects-711eb9ab.vercel.app",
       "http://localhost:5173"
     ];
     if (!origin || allowed.includes(origin)) return callback(null, true);
@@ -159,7 +159,7 @@ app.use(bodyParser.json());
 if (!process.env.GEMINI_API_KEY) {
   throw new Error("GEMINI_API_KEY environment variable not set. Please create it in Render dashboard.");
 }
-
+console.log("Gemini key loaded:", process.env.GEMINI_API_KEY?.slice(0, 10));
 // ✅ Fix: Correct Gemini API initialization
 const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
