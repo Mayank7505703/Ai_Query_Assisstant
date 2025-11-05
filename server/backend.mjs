@@ -157,13 +157,17 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // ✅ Fix: Correct environment variable name
+// ✅ Fix: Correct Gemini API initialization
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY environment variable not set. Please create it in Render dashboard.");
+  throw new Error("GEMINI_API_KEY environment variable not set.");
 }
 console.log("Gemini key loaded:", process.env.GEMINI_API_KEY?.slice(0, 10));
-// ✅ Fix: Correct Gemini API initialization
+
 const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+// ✅ ✅ Correct model here
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
 
 // ✅ Store chat sessions in memory
 const chatSessions = new Map();
