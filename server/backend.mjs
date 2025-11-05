@@ -1,9 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { v4 as uuidv4 } from 'uuid';
-import 'dotenv/config';
+
 
 // ✅ System prompt defining the AI's persona and capabilities
 const SYSTEM_PROMPT = `You are an intelligent, polite, and professional AI Chat Assistant named STEMROBO Assistant, created for STEMROBO Technologies Pvt. Ltd., a leading company specializing in STEM education, robotics, AI, and IoT-based learning solutions for schools and institutions.
@@ -162,7 +163,7 @@ if (!process.env.GEMINI_API_KEY) {
 console.log("Gemini key loaded:", process.env.GEMINI_API_KEY?.slice(0, 10));
 // ✅ Fix: Correct Gemini API initialization
 const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // ✅ Store chat sessions in memory
 const chatSessions = new Map();
@@ -181,44 +182,53 @@ app.post('/api/start', (req, res) => {
 });
 
 // ✅ Handle chat messages
-app.post('/api/chat', async (req, res) => {
+// ✅ Handle chat messages
+app.post("/api/chat", async (req, res) => {
   const { chatId, message } = req.body;
 
   if (!chatId || !chatSessions.has(chatId)) {
-    return res.status(400).json({ error: 'Invalid or missing chatId' });
+    return res.status(400).json({ error: "Invalid or missing chatId" });
   }
   if (!message) {
-    return res.status(400).json({ error: 'Missing message' });
+    return res.status(400).json({ error: "Missing message" });
   }
 
   try {
     const previousMessages = chatSessions.get(chatId);
-    previousMessages.push({ role: "user", parts: [{ text: message }] });
 
+    // ✅ Save new user message
+    previousMessages.push({ role: "user", text: message });
+
+    // ✅ Build plain-text chat history
+    const historyText = previousMessages
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
+      .join("\n");
+
+    // ✅ Combine with system prompt
     const chatInput = [
       { role: "system", parts: [{ text: SYSTEM_PROMPT }] },
       ...previousMessages
     ];
-
-    // ✅ FIXED LINE (use model directly instead of ai)
-    const result = await model.generateContent({ contents: chatInput });
-
-    // ✅ Properly extract response text from Gemini
+    
+    const result = await model.generateContent(chatInput);
+    
     const reply =
       result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
       result?.response?.text() ||
       "Sorry, I couldn't generate a response.";
+    
 
-    previousMessages.push({ role: "model", parts: [{ text: reply }] });
+    // ✅ Save assistant answer
+    previousMessages.push({ role: "assistant", text: reply });
     chatSessions.set(chatId, previousMessages);
 
     res.json({ text: reply });
-
   } catch (error) {
-    console.error('💥 Error during chat message streaming:', error);
-    res.status(500).json({ error: 'Failed to process chat message' });
+    console.error("💥 Gemini error:", error);
+    res.status(500).json({ error: "Failed to process chat message" });
   }
 });
+
 
 // ✅ Root route
 app.get('/', (req, res) => {
