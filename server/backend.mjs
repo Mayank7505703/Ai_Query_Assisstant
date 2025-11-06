@@ -1,6 +1,6 @@
-/*******************************
- ✅ LOAD ENV FIRST
-*******************************/
+/*************************************************
+ ✅ ENV + IMPORTS
+*************************************************/
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,42 +8,36 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Load /server/.env first
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-// ✅ Load fallback root .env
-dotenv.config();
+console.log("✅ GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Loaded ✅" : "❌ NOT FOUND");
 
-// ✅ Debug print
-console.log("✅ GEMINI_API_KEY:", process.env.GEMINI_API_KEY || "NOT FOUND");
-
-/*******************************
- ✅ IMPORTS
-*******************************/
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { v4 as uuidv4 } from "uuid";
 
-/*****************************************
- ✅ CHECK API KEY
-******************************************/
+/*************************************************
+ ✅ CHECK KEY
+*************************************************/
 if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY not found. Add it inside /server/.env or Render dashboard.");
+  console.error("❌ ERROR → Missing GEMINI_API_KEY");
   process.exit(1);
 }
 
-/*****************************************
- ✅ SYSTEM PROMPT
-******************************************/
-const SYSTEM_PROMPT = `You are an intelligent, polite, and professional AI Chat Assistant named STEMROBO Assistant, created for STEMROBO Technologies Pvt. Ltd., a leading company specializing in STEM education, robotics, AI, and IoT-based learning solutions for schools and institutions.
+/*************************************************
+ ✅ ✅ SYSTEM PROMPT (FULL — AS YOU PROVIDED)
+*************************************************/
+const SYSTEM_PROMPT = `
+You are an intelligent, polite, and professional AI Chat Assistant named STEMROBO Assistant, created for STEMROBO Technologies Pvt. Ltd., a leading company specializing in STEM education, robotics, AI, and IoT-based learning solutions for schools and institutions.
 
 Your primary goal is to guide customers and visitors by providing accurate, engaging, and helpful information about the company’s products, services, and processes.
 
 Your Capabilities:
 
 Company Introduction & Overview
+
 Introduce STEMROBO Technologies Pvt. Ltd. as an EdTech company empowering students through robotics, AI, coding, IoT, and experiential learning.
 
 Explain the company’s vision, mission, and educational goals.
@@ -51,129 +45,153 @@ Explain the company’s vision, mission, and educational goals.
 Highlight collaborations, achievements, and global presence.
 
 Product Assistance
-Provide detailed information about all STEMROBO products, kits, learning platforms, and courses.
-Suggest products based on:
-– Age group
-– Curriculum
-– Budget
-– Institution type
 
-Quotation & Pricing
-Collect:
-Product names
+Provide detailed information about all STEMROBO products, kits, learning platforms, and courses (e.g., AI Connect, STEM Learning Kits, Robotics Kits, Coding Platforms).
+
+Suggest the most suitable products or solutions based on customer requirements such as:
+
+Age group of students
+
+Curriculum needs
+
+Budget
+
+Type of institution (school, college, individual learner, etc.)
+
+Compare product options if the user asks for differences between two or more products.
+
+Quotation & Pricing Support
+
+If a customer asks for a quotation or estimated cost, guide them to share:
+
+Product name(s)
+
 Quantity
-Location
-Institution type
-Provide approximate quotation or guide to the sales team.
 
-Order Assistance
-Explain ordering, payment, and delivery timelines.
+Delivery location
 
-Partnership
-Explain onboarding schools, distributors, collaboration steps, demo process.
+Institution type (if applicable)
+
+Provide a rough quotation estimate based on available data or inform that the sales team will share the final quotation via email.
+
+Order & Purchase Assistance
+
+Explain how to place an order, payment methods, and delivery timelines.
+
+Guide users to official channels or websites for purchase.
+
+Customer Onboarding / Partnership
+
+Explain the steps to get enrolled or onboarded as a school partner or distributor.
+
+Share details on how to collaborate, apply, or schedule a demo session.
 
 Lead Collection
-Collect:
+
+Collect customer details such as:
+
 Name
+
+Contact number
+
 Email
-Contact
-Organization
-Ask permission before saving personal data.
+
+Organization name
+
+Always confirm before storing or sharing any personal data.
 
 Query Handling
-Answer FAQs, product queries, training, technical issues.
-If uncertain → connect with sales/support.
 
-Persona
-Professional, friendly, polite.
-Clear + structured responses.
-Focus only on STEMROBO context.
+Answer FAQs about product usage, technical issues, support requests, or training sessions.
 
-Format
+Redirect to support or sales contacts when necessary.
+
+Professional Behavior
+
+Always maintain a friendly, polite, and professional tone.
+
+Use clear, simple, and customer-focused language.
+
+Avoid sharing internal company information or false details.
+
+If unsure about something, respond:
+“I’ll connect you with our support/sales team to assist you further.”
+
+Tone & Personality
+
+Polite, informative, and approachable.
+
+Acts as a helpful digital representative of the company.
+
+Avoids jargon; prefers simple, confident, and professional explanations.
+
+Output Format
+
+For any product suggestion or quotation:
+
+Present answers in a clean, structured format with:
+
 Product Name
+
 Features
-Price Range
-Next Step
+
+Price Range / Estimate
+
+Next Step (e.g., “Would you like me to connect you to our sales team for a formal quotation?”)
+
+Final Instruction
+
+Always respond as the official AI representative of STEMROBO Technologies Pvt. Ltd., never as a generic chatbot.
 `;
 
-
-/*****************************************
- ✅ SETUP EXPRESS
-******************************************/
+/*************************************************
+ ✅ EXPRESS INIT
+*************************************************/
 const app = express();
-const port = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
-app.use(express.json());
-
-/*****************************************
- ✅ CORS
-******************************************/
-/*****************************************
- ✅ CORS (allow localhost + any *.vercel.app + your Render domain)
-******************************************/
+app.use(bodyParser.json());
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true); // curl/postman or same-origin
-      const allowList = [
-        /^https?:\/\/localhost:(5173|3000)$/,            // local dev
-        /^https?:\/\/.*\.vercel\.app$/,                   // all vercel previews
-        /^https?:\/\/.*\.onrender\.com$/,                 // your Render backend if it ever calls itself
-      ];
-      const ok = allowList.some((rule) =>
-        typeof rule === "string" ? origin === rule : rule.test(origin)
-      );
-      if (ok) return cb(null, true);
-      console.warn(`❌ CORS blocked request from: ${origin}`);
-      return cb(new Error("Not allowed by CORS"));
-    },
+    origin: "*",
     methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"],
   })
 );
 
-
-
-/*****************************************
+/*************************************************
  ✅ GEMINI SETUP
-******************************************/
-const genAI = new GoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+*************************************************/
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// ✅ BEST MODEL AVAILABLE
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-
-/*****************************************
- ✅ SESSION MEMORY
-******************************************/
-const chatSessions = new Map();
-
-
-/*****************************************
- ✅ START CHAT SESSION
-******************************************/
-app.post("/api/start", (req, res) => {
-  try {
-    const chatId = uuidv4();
-    chatSessions.set(chatId, []);
-
-    console.log("🆕 New Session:", chatId);
-    res.json({ chatId });
-  } catch (err) {
-    console.error("❌ Session start error:", err);
-    res.status(500).json({ error: "Failed to start session" });
-  }
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
 });
 
+/*************************************************
+ ✅ SESSION MEMORY
+*************************************************/
+const chatSessions = new Map();
 
-/*****************************************
- ✅ CHAT COMPLETION
-******************************************/
+/*************************************************
+ ✅ START SESSION
+*************************************************/
+app.post("/api/start", (req, res) => {
+  const chatId = uuidv4();
+  chatSessions.set(chatId, []);
+
+  console.log("🆕 New Session:", chatId);
+
+  res.json({ chatId });
+});
+
+/*************************************************
+ ✅ CHAT ENDPOINT
+*************************************************/
 app.post("/api/chat", async (req, res) => {
   const { chatId, message } = req.body;
 
   if (!chatId || !chatSessions.has(chatId)) {
-    return res.status(400).json({ error: "Invalid or missing chatId" });
+    return res.status(400).json({ error: "Invalid / missing chatId" });
   }
   if (!message) {
     return res.status(400).json({ error: "Missing message" });
@@ -182,63 +200,52 @@ app.post("/api/chat", async (req, res) => {
   try {
     const history = chatSessions.get(chatId);
 
+    const formattedHistory = history
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
+      .join("\n");
+
+    const fullPrompt = `
+${SYSTEM_PROMPT}
+
+---conversation---
+${formattedHistory}
+
+User: ${message}
+Assistant:
+`;
+
     history.push({ role: "user", text: message });
 
-    const fullPrompt =
-      SYSTEM_PROMPT +
-      "\n\n---conversation---\n" +
-      history
-        .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
-        .join("\n") +
-      `\nUser: ${message}\nModel: `;
-
-console.log(
-  "↗️ Gemini payload:",
-  JSON.stringify(
-    {
+    const payload = {
       contents: [
-        { role: "user", parts: [{ text: fullPrompt.slice(0, 200) + " …" }] }
-      ]
-    },
-    null,
-    2
-  )
-);
+        {
+          role: "user",
+          parts: [{ text: fullPrompt }],
+        },
+      ],
+    };
 
-      
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: "model",
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      {
-        role: "user",
-        parts: [{ text: message }],
-      }
-    ],
-  });
+    console.log("↗️ Gemini payload:", JSON.stringify(payload, null, 2));
 
+    const response = await model.generateContent(payload);
 
     const reply =
-      result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      result?.response?.text ??
+      response?.response?.candidates?.[0]?.content?.parts?.[0]?.text ??
       "Sorry, I could not generate a response.";
 
     history.push({ role: "assistant", text: reply });
     chatSessions.set(chatId, history);
 
-    return res.json({ text: reply });
+    res.json({ text: reply });
   } catch (err) {
-    console.error("Gemini error:", err);
-    return res.status(500).json({ error: "Failed to process chat message" });
+    console.error("❌ Gemini Error:", err);
+    res.status(500).json({ error: "Failed to process chat message" });
   }
 });
 
-
-/*****************************************
+/*************************************************
  ✅ START SERVER
-******************************************/
-app.listen(port, () => {
-  console.log(`✅ Server running on: ${port}`);
+*************************************************/
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
