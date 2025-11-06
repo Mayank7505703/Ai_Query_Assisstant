@@ -5,13 +5,17 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// ✅ Ensure correct .env path for local + Render
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ✅ Load /server/.env first
 dotenv.config({ path: path.join(__dirname, ".env") });
 
-console.log("✅ ENV Loaded => GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(0, 10) : "NOT FOUND");
+// ✅ Load fallback root .env
+dotenv.config();
 
+// ✅ Debug print
+console.log("✅ GEMINI_API_KEY:", process.env.GEMINI_API_KEY || "NOT FOUND");
 
 /*******************************
  ✅ IMPORTS
@@ -22,14 +26,13 @@ import bodyParser from "body-parser";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { v4 as uuidv4 } from "uuid";
 
-
 /*****************************************
  ✅ CHECK API KEY
 ******************************************/
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error("❌ GEMINI_API_KEY not found. Add it inside /server/.env AND Render dashboard.");
+  console.error("❌ GEMINI_API_KEY not found. Add it inside /server/.env or Render dashboard.");
+  process.exit(1);
 }
-
 
 /*****************************************
  ✅ SYSTEM PROMPT
@@ -101,22 +104,34 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(express.json());
-app.use(bodyParser.json());
 
 /*****************************************
  ✅ CORS
 ******************************************/
+/*****************************************
+ ✅ CORS (allow localhost + any *.vercel.app + your Render domain)
+******************************************/
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://ai-assistant-nine-theta.vercel.app",
-      "https://ai-assistant-idris-projects-711eb9ab.vercel.app"
-    ],
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // curl/postman or same-origin
+      const allowList = [
+        /^https?:\/\/localhost:(5173|3000)$/,            // local dev
+        /^https?:\/\/.*\.vercel\.app$/,                   // all vercel previews
+        /^https?:\/\/.*\.onrender\.com$/,                 // your Render backend if it ever calls itself
+      ];
+      const ok = allowList.some((rule) =>
+        typeof rule === "string" ? origin === rule : rule.test(origin)
+      );
+      if (ok) return cb(null, true);
+      console.warn(`❌ CORS blocked request from: ${origin}`);
+      return cb(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type"],
   })
 );
+
 
 
 /*****************************************
@@ -173,9 +188,9 @@ app.post("/api/chat", async (req, res) => {
       SYSTEM_PROMPT +
       "\n\n---conversation---\n" +
       history
-        .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
+        .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
         .join("\n") +
-      `\nUser: ${message}\nAssistant: `;
+      `\nUser: ${message}\nModel: `;
 
 console.log(
   "↗️ Gemini payload:",
@@ -191,21 +206,26 @@ console.log(
 );
 
       
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: fullPrompt }],
-        },
-      ],
-    });
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "model",
+        parts: [{ text: SYSTEM_PROMPT }],
+      },
+      {
+        role: "user",
+        parts: [{ text: message }],
+      }
+    ],
+  });
+
 
     const reply =
       result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ??
       result?.response?.text ??
       "Sorry, I could not generate a response.";
 
-    history.push({ role: "model", text: reply });
+    history.push({ role: "assistant", text: reply });
     chatSessions.set(chatId, history);
 
     return res.json({ text: reply });
